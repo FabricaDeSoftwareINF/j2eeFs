@@ -33,7 +33,7 @@ public class FSServlet extends HttpServlet {
 
     @Override
     public void init() throws ServletException {
-        super.init(); //To change body of generated methods, choose Tools | Templates.
+        super.init(); 
         this.beans = new FsBeans();
         registraBeans(CLASSPATH, "");
     }
@@ -56,16 +56,16 @@ public class FSServlet extends HttpServlet {
                 String name = fullName.substring(0, fullName.length() - 6);
                 Class k = getServletContext().getClassLoader().loadClass(name);
                 if (k.isAnnotationPresent(FsBean.class)) {
-                    FsBean a = (FsBean) k.getAnnotation(FsBean.class);
-                    String nome = a.nome();
+                    FsBean beanAnnotated = (FsBean) k.getAnnotation(FsBean.class);
+                    String nome = beanAnnotated.nome();
                     if (nome.isEmpty()) {
                         nome = k.getSimpleName().substring(0, 1).toLowerCase();
                         if (k.getSimpleName().length() > 1) {
                             nome += k.getSimpleName().substring(1);
                         }
                     }
-                    FsEscopo escopo = a.escopo();
-                    beans.registerDeclaredBean(name, k, FsEscopo.SESSAO);
+                    FsEscopo escopo = beanAnnotated.escopo();
+                    beans.registerDeclaredBean(name, k, escopo);
                 }
             } catch (ClassNotFoundException ex) {
                 Logger.getLogger(FSServlet.class.getName()).log(Level.SEVERE,
