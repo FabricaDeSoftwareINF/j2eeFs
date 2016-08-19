@@ -1,5 +1,6 @@
 package br.ufg.inf.fabrica.j2eedesigns.fsinf.anotacoes;
 
+import br.ufg.inf.fabrica.j2eedesigns.fsinf.domain.FsEscopo;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -18,5 +19,5 @@ import java.lang.annotation.Target;
 @Retention(value = RetentionPolicy.RUNTIME)
 public @interface FsBean {
     String nome() default "";
-    EscopoBeanFs escopo() default EscopoBeanFs.SESSAO;
+    FsEscopo escopo() default FsEscopo.SESSAO;
 }
