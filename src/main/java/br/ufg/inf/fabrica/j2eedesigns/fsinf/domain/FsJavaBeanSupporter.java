@@ -1,6 +1,5 @@
 package br.ufg.inf.fabrica.j2eedesigns.fsinf.domain;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.InvalidParameterException;
@@ -43,6 +42,10 @@ public class FsJavaBeanSupporter {
         return instanceClass.getMethod(setterName, argumentType);
     }
     
+    public static Method getMethod(Class instanceClass, String nomeMetodo) throws NoSuchMethodException{
+        return instanceClass.getMethod(nomeMetodo, null);
+    }
+    
     public static boolean isTipoBasico(Class klass){
         return klass.isPrimitive() ||
                 klass.equals(Boolean.class) || 
@@ -54,9 +57,10 @@ public class FsJavaBeanSupporter {
                 klass.equals(Double.class) || 
                 klass.equals(String.class);
     }
-    
+
     private static String getNomeMetodoGetter(String nomeAtributo){
         return "get" + nomeAtributo.substring(0,1).toUpperCase() + 
                 nomeAtributo.substring(1);
     }
+
 }

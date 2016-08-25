@@ -27,6 +27,7 @@ public class ProcessadorDeRequisicao {
     private final FsBeans fsBeans;
     private final String regExpPonto = "\\.";
     private final String actionForm = "actionForm";
+    private AcaoFormulario acaoForm = null;
 
     public ProcessadorDeRequisicao(HttpServletRequest request,
             HttpServletResponse response, FsBeans fsBeans) {
@@ -112,11 +113,47 @@ public class ProcessadorDeRequisicao {
     }
 
     private void validaAcaoFormularioInformado(String acao)
-            throws AcaoDoFormularioNaoInformado {
+            throws AcaoDoFormularioNaoInformado, BeanNaoRegistradoException, 
+            NoSuchMethodException, IllegalAccessException, 
+            IllegalArgumentException, InvocationTargetException {
         if (acao == null || acao.isEmpty()) {
             throw new AcaoDoFormularioNaoInformado(
                     "Parâmetro 'actionForm' não informado no formulário");
         }
+        String[] caminho = acao.split(regExpPonto);
+
+        String beanName = caminho[0];
+        FsBean fsBean = fsBeans.get(beanName);
+        
+        if (fsBean == null) {
+            throw new BeanNaoRegistradoException("Bean "
+                    + beanName + " não registrado");
+        }
+        Object hostInstance = buscarBean(fsBean);
+        Object attrInstance = null;
+        Class hostClass = fsBean.getKlass();
+        Class attrClass = null;
+        String attrName = null;
+        
+        for (int i = 1; i < caminho.length; i++) {
+            if(attrClass!=null){
+                hostClass = attrClass;
+                hostInstance = attrInstance;
+            }
+            attrName = caminho[i];
+            if((i+1)==caminho.length){
+                Method metodo = FsJavaBeanSupporter.getMethod(hostClass, 
+                        caminho[i]);
+                acaoForm = new AcaoFormulario(acao, metodo, hostInstance);
+            } else {
+                attrClass = FsJavaBeanSupporter.getTipoDeAtributo(hostClass,
+                    attrName);
+                attrInstance = FsJavaBeanSupporter.get(hostInstance, attrName);
+            }
+        }
+        System.out.println("teste");
+        //VERIFICAR SE É UM MÉTODO E RETORNA STRING
+        
     }
 
     private void atualizarParametrosInformados(
@@ -166,7 +203,8 @@ public class ProcessadorDeRequisicao {
         return bean;
     }
 
-    public String executarFuncaoFormulario(){
-        return "index.jsp";
+    public String executarFuncaoFormulario() throws IllegalAccessException, 
+            IllegalArgumentException, InvocationTargetException{
+        return acaoForm.executar();
     }
 }
