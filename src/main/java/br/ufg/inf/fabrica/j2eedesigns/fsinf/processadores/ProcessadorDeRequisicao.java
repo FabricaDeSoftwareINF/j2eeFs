@@ -6,90 +6,153 @@ import br.ufg.inf.fabrica.j2eedesigns.fsinf.domain.FsJavaBeanSupporter;
 import br.ufg.inf.fabrica.j2eedesigns.fsinf.excecoes.AcaoDoFormularioNaoInformado;
 import br.ufg.inf.fabrica.j2eedesigns.fsinf.excecoes.BeanNaoRegistradoException;
 import br.ufg.inf.fabrica.j2eedesigns.fsinf.excecoes.ParametroInvalidoException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
  *
  * @author danilloguimaraes
  */
 public class ProcessadorDeRequisicao {
+
     private final HttpServletRequest request;
     private final HttpServletResponse response;
     private final FsBeans fsBeans;
     private final String regExpPonto = "\\.";
     private final String actionForm = "actionForm";
-    
-    public ProcessadorDeRequisicao(HttpServletRequest request, 
-            HttpServletResponse response, FsBeans fsBeans){
+
+    public ProcessadorDeRequisicao(HttpServletRequest request,
+            HttpServletResponse response, FsBeans fsBeans) {
         this.request = request;
         this.response = response;
         this.fsBeans = fsBeans;
     }
-    
-    public String processar() throws AcaoDoFormularioNaoInformado, 
+
+    public String processar() throws AcaoDoFormularioNaoInformado,
             BeanNaoRegistradoException,
             NoSuchMethodException,
-            ParametroInvalidoException{
-        validarNomesParametros();
-        throw new NotImplementedException();
-    }
-    
-    private void validarNomesParametros() throws AcaoDoFormularioNaoInformado, 
-            BeanNaoRegistradoException,
-            NoSuchMethodException,
-            ParametroInvalidoException{
-        String acao = request.getParameter(actionForm);
-        validaAcaoFormularioInformado(acao);
-        for (Map.Entry<String, String[]> entry:
-                request.getParameterMap().entrySet()) {
-            String parametro = entry.getKey();
-            if(parametro.equals(actionForm)){
-                continue;
-            }
-            validarNomeParametro(parametro);
-        }
+            ParametroInvalidoException,
+            IllegalAccessException,
+            IllegalArgumentException,
+            InvocationTargetException {
+        validarParametros();
+        throw new UnsupportedOperationException();
     }
 
-    private void validarNomeParametro(String parametro) 
-            throws BeanNaoRegistradoException, NoSuchMethodException, 
-            ParametroInvalidoException {
+    private List<ParametroValido> validarParametros() 
+            throws AcaoDoFormularioNaoInformado,
+            BeanNaoRegistradoException,
+            NoSuchMethodException,
+            ParametroInvalidoException,
+            IllegalAccessException,
+            IllegalArgumentException,
+            InvocationTargetException {
+        String acao = request.getParameter(actionForm);
+        validaAcaoFormularioInformado(acao);
+        List<ParametroValido> parametrosValidos = new ArrayList<>();
+        for (Map.Entry<String, String[]> entry
+                : request.getParameterMap().entrySet()) {
+            String parametro = entry.getKey();
+            if (parametro.equals(actionForm)) {
+                continue;
+            }
+            parametrosValidos.add(validarParametro(parametro));
+        }
+        return parametrosValidos;
+    }
+
+    private ParametroValido validarParametro(String parametro)
+            throws BeanNaoRegistradoException, NoSuchMethodException,
+            ParametroInvalidoException, IllegalAccessException, 
+            IllegalArgumentException, InvocationTargetException {
         String[] caminho = parametro.split(regExpPonto);
-        
+
         String beanName = caminho[0];
         FsBean fsBean = fsBeans.get(beanName);
         
-        if(fsBean==null){
-            throw new BeanNaoRegistradoException("Bean " +
-                    beanName + " não registrado");
+        if (fsBean == null) {
+            throw new BeanNaoRegistradoException("Bean "
+                    + beanName + " não registrado");
         }
+        Object hostInstance = buscarBean(fsBean);
+        Object attrInstance = null;
         Class hostClass = fsBean.getKlass();
+        Class attrClass = null;
+        String attrName = null;
+        
         for (int i = 1; i < caminho.length; i++) {
-            String attrName = caminho[i];
-            hostClass = FsJavaBeanSupporter.getTipoDeAtributo(hostClass, 
+            if(attrClass!=null){
+                hostClass = attrClass;
+                hostInstance = attrInstance;
+            }
+            attrName = caminho[i];
+            attrClass = FsJavaBeanSupporter.getTipoDeAtributo(hostClass,
                     attrName);
+            attrInstance = FsJavaBeanSupporter.get(hostInstance, attrName);
         }
-        if(!FsJavaBeanSupporter.isTipoBasico(hostClass)){
+        if (!FsJavaBeanSupporter.isTipoBasico(attrClass)) {
             throw new ParametroInvalidoException(
                     "Parâmetro informado não é um tipo básico (Tipo primitivo, "
-                            + "Boolean, Byte, Character, Short, Integer, Long, "
-                            + "Double ou String");
+                    + "Boolean, Byte, Character, Short, Integer, Long, "
+                    + "Double ou String");
         }
-        
+        Method setter = FsJavaBeanSupporter.getSetter(hostClass, attrName, 
+                attrClass);
+        String valor = request.getParameter(parametro);
+        return new ParametroValido(parametro, setter, hostInstance, valor);
     }
 
-    private void validaAcaoFormularioInformado(String acao) 
+    private void validaAcaoFormularioInformado(String acao)
             throws AcaoDoFormularioNaoInformado {
-        if(acao==null || acao.isEmpty()){
+        if (acao == null || acao.isEmpty()) {
             throw new AcaoDoFormularioNaoInformado(
                     "Parâmetro 'actionForm' não informado no formulário");
         }
     }
-    
-    private boolean acaoDoFormularioFoiInformado(){
-        throw new NotImplementedException();
+
+    private Object buscarBean(FsBean fsBean) throws NoSuchMethodException {
+        Object bean;
+        try {
+            switch (fsBean.getEscopo()) {
+                case REQUISICAO:
+                    bean = request.getAttribute(fsBean.getName());
+                    if (bean == null) {
+                        bean = FsJavaBeanSupporter.constroi(fsBean.getKlass());
+                        request.setAttribute(fsBean.getName(), bean);
+                    }
+                    break;
+                case SESSAO:
+                    bean = request.getSession().getAttribute(fsBean.getName());
+                    if (bean == null) {
+                        bean = FsJavaBeanSupporter.constroi(fsBean.getKlass());
+                        request.getSession().setAttribute(fsBean.getName(), 
+                                bean);
+                    }
+                    break;
+                default: //APLICACAO
+                    bean = request.getServletContext().getAttribute(
+                            fsBean.getName());
+                    if (bean == null) {
+                        bean = FsJavaBeanSupporter.constroi(fsBean.getKlass());
+                        request.getServletContext().setAttribute(fsBean.getName(),
+                                bean);
+                    }
+                    break;
+            }
+        } catch (InstantiationException | IllegalAccessException | 
+                IllegalArgumentException | InvocationTargetException ex) {
+            Logger.getLogger(ProcessadorDeRequisicao.class.getName()).log(
+                    Level.SEVERE, null, ex);
+            return null;
+        }
+        return bean;
     }
 
 }
