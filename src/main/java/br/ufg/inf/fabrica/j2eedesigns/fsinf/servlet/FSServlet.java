@@ -3,17 +3,11 @@ package br.ufg.inf.fabrica.j2eedesigns.fsinf.servlet;
 import br.ufg.inf.fabrica.j2eedesigns.fsinf.anotacoes.FsBean;
 import br.ufg.inf.fabrica.j2eedesigns.fsinf.domain.FsBeans;
 import br.ufg.inf.fabrica.j2eedesigns.fsinf.domain.FsEscopo;
-import br.ufg.inf.fabrica.j2eedesigns.fsinf.domain.FsJavaBeanSupporter;
 import br.ufg.inf.fabrica.j2eedesigns.fsinf.excecoes.AcaoDoFormularioNaoInformado;
-import br.ufg.inf.fabrica.j2eedesigns.fsinf.excecoes.AtributoInformadoInexistente;
 import br.ufg.inf.fabrica.j2eedesigns.fsinf.excecoes.BeanNaoRegistradoException;
-import br.ufg.inf.fabrica.j2eedesigns.fsinf.excecoes.FalhaInstanciacaoException;
 import br.ufg.inf.fabrica.j2eedesigns.fsinf.processadores.ProcessadorDeRequisicao;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Enumeration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.RequestDispatcher;
@@ -79,14 +73,14 @@ public class FSServlet extends HttpServlet {
 
     protected void processRequest(HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
-            BeanNaoRegistradoException, FalhaInstanciacaoException,
-            NoSuchFieldException, AtributoInformadoInexistente, NoSuchMethodException {
+            BeanNaoRegistradoException,
+            NoSuchFieldException, NoSuchMethodException {
 
         /**
          * Pensar no tratamento do Servlet para envio de arquivos
          */
         ProcessadorDeRequisicao processador = new ProcessadorDeRequisicao(
-                request, response);
+                request, response, beans);
         String resultado;
         try {
             resultado = processador.processar();
@@ -96,7 +90,12 @@ public class FSServlet extends HttpServlet {
             RequestDispatcher dispatcher
                     = request.getRequestDispatcher(resultado);
             dispatcher.forward(request, response);
-        } catch (AcaoDoFormularioNaoInformado ex) {
+        } catch (AcaoDoFormularioNaoInformado | BeanNaoRegistradoException ex) {
+            Logger.getLogger(FSServlet.class.getName()).log(Level.SEVERE, null, ex);
+            RequestDispatcher dispatcher
+                    = request.getRequestDispatcher(PAGINA_FALHA_NO_SISTEMA);
+            dispatcher.forward(request, response);
+        } catch (Exception ex) {
             Logger.getLogger(FSServlet.class.getName()).log(Level.SEVERE, null, ex);
             RequestDispatcher dispatcher
                     = request.getRequestDispatcher(PAGINA_FALHA_NO_SISTEMA);
@@ -122,8 +121,8 @@ public class FSServlet extends HttpServlet {
             HttpServletResponse response) throws ServletException, IOException {
         try {
             processRequest(request, response);
-        } catch (BeanNaoRegistradoException | FalhaInstanciacaoException |
-                NoSuchFieldException | AtributoInformadoInexistente |
+        } catch (BeanNaoRegistradoException |
+                NoSuchFieldException |
                 NoSuchMethodException ex) {
             Logger.getLogger(FSServlet.class.getName()).
                     log(Level.SEVERE, null, ex);
@@ -143,8 +142,8 @@ public class FSServlet extends HttpServlet {
             throws ServletException, IOException {
         try {
             processRequest(request, response);
-        } catch (BeanNaoRegistradoException | FalhaInstanciacaoException |
-                NoSuchFieldException | AtributoInformadoInexistente |
+        } catch (BeanNaoRegistradoException |
+                NoSuchFieldException |
                 NoSuchMethodException ex) {
             Logger.getLogger(FSServlet.class.getName()).log(Level.SEVERE, null,
                     ex);

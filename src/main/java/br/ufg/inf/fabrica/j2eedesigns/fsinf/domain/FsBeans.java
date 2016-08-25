@@ -24,5 +24,5 @@ public class FsBeans extends HashMap<String, FsBean>{
         }
         return !(get(nomeBean)==null);
     }
-    
+
 }
