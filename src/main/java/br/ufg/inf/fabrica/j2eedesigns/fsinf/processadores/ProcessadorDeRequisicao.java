@@ -42,8 +42,9 @@ public class ProcessadorDeRequisicao {
             IllegalAccessException,
             IllegalArgumentException,
             InvocationTargetException {
-        validarParametros();
-        throw new UnsupportedOperationException();
+        List<ParametroValido> parametrosValidos = validarParametros();
+        atualizarParametrosInformados(parametrosValidos);
+        return executarFuncaoFormulario();
     }
 
     private List<ParametroValido> validarParametros() 
@@ -106,7 +107,8 @@ public class ProcessadorDeRequisicao {
         Method setter = FsJavaBeanSupporter.getSetter(hostClass, attrName, 
                 attrClass);
         String valor = request.getParameter(parametro);
-        return new ParametroValido(parametro, setter, hostInstance, valor);
+        return new ParametroValido(parametro, setter, hostInstance, valor, 
+                attrClass);
     }
 
     private void validaAcaoFormularioInformado(String acao)
@@ -117,6 +119,15 @@ public class ProcessadorDeRequisicao {
         }
     }
 
+    private void atualizarParametrosInformados(
+            List<ParametroValido> parametrosValidos) 
+            throws IllegalAccessException, IllegalArgumentException, 
+            InvocationTargetException{
+        for (ParametroValido parametro : parametrosValidos) {
+            parametro.atualiza();
+        }
+    }
+    
     private Object buscarBean(FsBean fsBean) throws NoSuchMethodException {
         Object bean;
         try {
@@ -155,4 +166,7 @@ public class ProcessadorDeRequisicao {
         return bean;
     }
 
+    public String executarFuncaoFormulario(){
+        return "index.jsp";
+    }
 }
